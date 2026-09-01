@@ -2,7 +2,7 @@
 
 **Convierte montos numéricos a letras, con el formato exacto que exigen los documentos legales y financieros** — cheques, facturas, recibos y contratos: `CIENTO VEINTICINCO DÓLARES CON 50/100`.
 
-[![PyPI](https://img.shields.io/pypi/v/spellmoney?logo=pypi&logoColor=white&color=3775A9)](https://pypi.org/project/spellmoney/)
+[![PyPI](https://img.shields.io/pypi/v/spellmoney?logo=pypi&logoColor=white&color=3775A9&label=pypi)](https://pypi.org/project/spellmoney/)
 ![Python](https://img.shields.io/badge/Python-%3E%3D3.9-3776AB?logo=python&logoColor=white)
 ![Tests](https://github.com/brandriver-bit/spellmoney/actions/workflows/tests.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-green)
