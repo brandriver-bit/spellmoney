@@ -113,6 +113,14 @@ Parámetros de `a_letras`:
 
 Enteros de `0` a `999,999,999,999,999`. Un monto fuera de ese rango lanza `SpellMoneyError`, igual que un monto negativo, una moneda no reconocida o un idioma no soportado.
 
+## Redondeo y precisión
+
+Los montos con **dos decimales** —el caso normal en dinero— se convierten de forma exacta. Verificado sobre el millón de montos de `0.00` a `9999.99`: ninguna diferencia frente a aritmética decimal exacta.
+
+Con **tres o más decimales**, el empate exacto (`2.675`, `1.005`) se resuelve según el valor binario que el `float` almacena realmente, que puede quedar apenas por debajo del decimal escrito. En ese caso `2.675` se convierte como `2.67`, igual que devuelve `round(2.675, 2)` — la diferencia está en el tipo `float`, no en esta librería.
+
+Si necesitás control exacto sobre montos de más de dos decimales, redondealos con `Decimal` antes de llamar a `a_letras` y pasá el resultado como `float`.
+
 ## Desarrollo
 
 ```bash
