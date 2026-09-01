@@ -36,6 +36,9 @@ a_letras(2, moneda="GBP", mayusculas=False)
 
 a_letras(10.50, centavos="palabras")
 # 'DIEZ DÓLARES CON CINCUENTA CENTAVOS'
+
+a_letras("125.50")
+# 'CIENTO VEINTICINCO DÓLARES CON 50/100'  (lectura decimal exacta)
 ```
 
 ### Otros idiomas
@@ -93,7 +96,7 @@ Portugués y francés todavía tienen huecos en divisas regionales. Los pasos ex
 
 | Función | Descripción |
 |---|---|
-| `a_letras(monto, moneda="USD", idioma="es", centavos="fraccion", mayusculas=True)` | Convierte un monto con nombre de moneda. |
+| `a_letras(monto, moneda="USD", idioma="es", centavos="fraccion", mayusculas=True)` | Convierte un monto con nombre de moneda. `monto` puede ser `int`, `float`, `Decimal` o cadena decimal. |
 | `numero_a_letras(n)` | Solo el número, en español. |
 | `numero_a_letras_en(n)` | Solo el número, en inglés. |
 | `numero_a_letras_pt(n, genero="m")` | Solo el número, en portugués. |
@@ -104,6 +107,7 @@ Portugués y francés todavía tienen huecos en divisas regionales. Los pasos ex
 
 Parámetros de `a_letras`:
 
+- `monto` — `int`, `float`, `Decimal` o cadena decimal (`"125.50"`).
 - `moneda` — código ISO 4217. Por defecto `"USD"`.
 - `idioma` — `"es"`, `"en"`, `"pt"` o `"fr"`. Por defecto `"es"`.
 - `centavos` — `"fraccion"` escribe `50/100`; `"palabras"` escribe `CINCUENTA CENTAVOS`.
@@ -115,11 +119,10 @@ Enteros de `0` a `999,999,999,999,999`. Un monto fuera de ese rango lanza `Spell
 
 ## Redondeo y precisión
 
-Los montos con **dos decimales** —el caso normal en dinero— se convierten de forma exacta. Verificado sobre el millón de montos de `0.00` a `9999.99`: ninguna diferencia frente a aritmética decimal exacta.
+Un monto se puede pasar como `float`, como `Decimal` o como cadena decimal, y la diferencia importa:
 
-Con **tres o más decimales**, el empate exacto (`2.675`, `1.005`) se resuelve según el valor binario que el `float` almacena realmente, que puede quedar apenas por debajo del decimal escrito. En ese caso `2.675` se convierte como `2.67`, igual que devuelve `round(2.675, 2)` — la diferencia está en el tipo `float`, no en esta librería.
-
-Si necesitás control exacto sobre montos de más de dos decimales, redondealos con `Decimal` antes de llamar a `a_letras` y pasá el resultado como `float`.
+- **Cadena o `Decimal`** — `a_letras("125.50")`, `a_letras(Decimal("125.50"))`: los dígitos se leen tal como fueron escritos, sin pasar por punto flotante. El redondeo del tercer decimal en adelante es half-up exacto, así que `"2.675"` da `68/100`. Es la vía recomendada cuando el monto viene de una base de datos, un formulario o un archivo.
+- **`float`** — `a_letras(125.50)`: los montos de **dos decimales** se convierten de forma exacta. Verificado sobre el millón de montos de `0.00` a `9999.99`: ninguna diferencia frente a aritmética decimal exacta. Con **tres o más decimales**, el empate exacto se resuelve según el valor binario que el `float` almacena realmente, que puede quedar apenas por debajo del decimal escrito: `2.675` da `67/100`. Es una propiedad del tipo `float`, no de esta librería.
 
 ## Desarrollo
 

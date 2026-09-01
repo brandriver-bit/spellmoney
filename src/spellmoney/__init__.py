@@ -24,7 +24,9 @@ Uso básico::
 """
 
 import math
-from typing import Callable, Dict, List, Literal, Tuple
+import re
+from decimal import Decimal
+from typing import Callable, Dict, List, Literal, Tuple, Union
 
 from .monedas import MONEDAS, FormaMoneda
 
@@ -38,9 +40,10 @@ __all__ = [
     "FormaMoneda",
     "IDIOMAS",
     "SpellMoneyError",
+    "Monto",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 IDIOMAS: Tuple[str, ...] = ("es", "en", "pt", "fr")
 
@@ -432,8 +435,56 @@ def _apocopar_uno(idioma: str, cantidad: str, genero: str) -> str:
     return cantidad  # en: sin género; pt: ya viene con el género correcto
 
 
+_RE_MONTO = re.compile(r"^\s*(\d+)(?:\.(\d*))?\s*$")
+
+Monto = Union[int, float, str, Decimal]
+
+
+def _partir_monto(monto: Monto):
+    """Separa un monto en su parte entera y sus centavos.
+
+    Con un ``str`` (o un ``Decimal``) el corte es exacto: se leen los dígitos
+    tal como fueron escritos y el redondeo del tercer decimal en adelante es
+    half-up ("2.675" -> 68 centavos). Con un ``float`` el resultado depende de
+    la representación binaria del valor recibido.
+    """
+    if isinstance(monto, Decimal):
+        monto = format(monto, "f")
+    if isinstance(monto, str):
+        if monto.lstrip().startswith("-"):
+            raise SpellMoneyError("no se admiten montos negativos")
+        partes = _RE_MONTO.match(monto)
+        if not partes:
+            raise SpellMoneyError(
+                f"monto '{monto}' no es un decimal válido. Se espera algo como '125.50'"
+            )
+        entero = int(partes.group(1))
+        if entero >= _MAXIMO:
+            raise SpellMoneyError(
+                "el monto excede el rango soportado (máximo 999,999,999,999,999)"
+            )
+        decimales = partes.group(2) or ""
+        centavos = int((decimales + "00")[:2])
+        if (decimales[2:3] or "0") >= "5":
+            centavos += 1
+        return (entero + 1, 0) if centavos == 100 else (entero, centavos)
+
+    if isinstance(monto, bool) or not isinstance(monto, (int, float)):
+        raise SpellMoneyError("se esperaba un monto numérico o una cadena decimal")
+    if isinstance(monto, float) and math.isnan(monto):
+        raise SpellMoneyError("se esperaba un monto numérico o una cadena decimal")
+    if monto < 0:
+        raise SpellMoneyError("no se admiten montos negativos")
+    entero = int(monto)
+    centavos = math.floor((monto - entero) * 100 + 0.5)
+    if centavos == 100:
+        entero += 1
+        centavos = 0
+    return entero, centavos
+
+
 def a_letras(
-    monto: float,
+    monto: Monto,
     moneda: str = "USD",
     idioma: str = "es",
     centavos: str = "fraccion",
@@ -442,7 +493,10 @@ def a_letras(
     """Convierte un monto a su representación en letras para documentos legales
     y financieros.
 
-    :param monto: Cantidad a convertir. Debe ser >= 0.
+    :param monto: Cantidad a convertir. Debe ser >= 0. Puede ser ``int``,
+        ``float``, ``Decimal`` o una cadena decimal (``"125.50"``); la cadena
+        y el ``Decimal`` se interpretan de forma exacta, sin pasar por la
+        aritmética de punto flotante.
     :param moneda: Código ISO 4217 de la moneda (por defecto ``"USD"``).
     :param idioma: ``"es"`` (por defecto), ``"en"``, ``"pt"`` o ``"fr"``. Si la
         moneda elegida todavía no tiene traducción a ese idioma, se lanza
@@ -466,16 +520,7 @@ def a_letras(
         )
     if centavos not in ("fraccion", "palabras"):
         raise SpellMoneyError("centavos debe ser 'fraccion' o 'palabras'")
-    if isinstance(monto, bool) or not isinstance(monto, (int, float)):
-        raise SpellMoneyError("se esperaba un monto numérico")
-    if monto < 0:
-        raise SpellMoneyError("no se admiten montos negativos")
-
-    entero = int(monto)
-    parte_centavos = math.floor((monto - entero) * 100 + 0.5)
-    if parte_centavos == 100:
-        entero += 1
-        parte_centavos = 0
+    entero, parte_centavos = _partir_monto(monto)
 
     info = entrada_moneda[idioma]
     genero = info["genero"]

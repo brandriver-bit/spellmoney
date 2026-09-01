@@ -1,3 +1,7 @@
+import random
+import re
+from decimal import Decimal
+
 import pytest
 
 from spellmoney import (
@@ -230,3 +234,114 @@ def test_ayuda_buscada_moneda_sin_traduccion_a_un_idioma():
 
 def test_idiomas_declarados():
     assert list(IDIOMAS) == ["es", "en", "pt", "fr"]
+
+
+# =============================================================================
+# Montos como cadena o Decimal: lectura decimal exacta
+# =============================================================================
+
+
+def test_cadena_equivale_al_numero_en_casos_normales():
+    assert a_letras("125.50") == "CIENTO VEINTICINCO DÓLARES CON 50/100"
+    assert a_letras("0") == "CERO DÓLARES CON 00/100"
+    assert a_letras("1", moneda="GTQ") == "UN QUETZAL CON 00/100"
+    assert a_letras("21") == "VEINTIÚN DÓLARES CON 00/100"
+
+
+def test_cadena_acepta_decimales_incompletos():
+    assert a_letras("10.5") == "DIEZ DÓLARES CON 50/100"
+    assert a_letras("10.") == "DIEZ DÓLARES CON 00/100"
+    assert a_letras("10.05") == "DIEZ DÓLARES CON 05/100"
+
+
+def test_cadena_redondea_half_up_de_forma_exacta():
+    # El float más cercano a 2.675 queda por debajo, así que el número da 67.
+    assert a_letras(2.675) == "DOS DÓLARES CON 67/100"
+    # La cadena conserva el decimal escrito, así que redondea a 68.
+    assert a_letras("2.675") == "DOS DÓLARES CON 68/100"
+    assert a_letras("1.005") == "UN DÓLAR CON 01/100"
+    assert a_letras("0.005") == "CERO DÓLARES CON 01/100"
+    assert a_letras("0.004") == "CERO DÓLARES CON 00/100"
+
+
+def test_cadena_acarrea_al_entero():
+    assert a_letras("19.999") == "VEINTE DÓLARES CON 00/100"
+    assert a_letras("0.999") == "UN DÓLAR CON 00/100"
+
+
+def test_acepta_decimal():
+    assert a_letras(Decimal("125.50")) == "CIENTO VEINTICINCO DÓLARES CON 50/100"
+    assert a_letras(Decimal("2.675")) == "DOS DÓLARES CON 68/100"
+
+
+def test_cadena_admite_el_tope_del_rango():
+    assert "99/100" in a_letras("999999999999999.99")
+
+
+@pytest.mark.parametrize(
+    "invalido", ["", "abc", "1,50", "-5", "1.2.3", "1e3", " ", "+5"]
+)
+def test_rechaza_cadenas_invalidas(invalido):
+    with pytest.raises(SpellMoneyError):
+        a_letras(invalido)
+
+
+def test_rechaza_cadenas_fuera_de_rango():
+    with pytest.raises(SpellMoneyError):
+        a_letras("1000000000000000")
+
+
+# =============================================================================
+# Pruebas por propiedades: miles de valores generados, invariantes verificadas
+# =============================================================================
+
+
+def test_a_letras_cumple_sus_invariantes_sobre_valores_generados():
+    azar = random.Random(20260901)  # semilla fija: un fallo siempre se reproduce
+    codigos = list(MONEDAS)
+    for _ in range(5000):
+        idioma = azar.choice(IDIOMAS)
+        codigo = azar.choice(codigos)
+        if idioma not in MONEDAS[codigo]:
+            continue
+        monto = azar.randrange(10 ** 12) + azar.random()
+
+        resultado = a_letras(monto, moneda=codigo, idioma=idioma)
+
+        assert isinstance(resultado, str)
+        assert resultado
+        assert "None" not in resultado
+        assert "  " not in resultado
+        assert resultado.strip() == resultado
+        assert resultado == resultado.upper()
+        assert re.search(r"\d\d/100$", resultado)
+        # El apócope nunca deja "uno" pegado al nombre de la moneda.
+        if idioma == "es":
+            assert " UNO " not in f" {resultado} "
+
+
+def test_numero_y_cadena_coinciden_en_montos_de_dos_decimales():
+    azar = random.Random(4217)
+    for _ in range(5000):
+        entero = azar.randrange(10 ** 9)
+        centavos = azar.randrange(100)
+        como_cadena = f"{entero}.{centavos:02d}"
+        assert a_letras(float(como_cadena)) == a_letras(como_cadena)
+
+
+def test_los_conversores_de_numero_nunca_producen_texto_malformado():
+    azar = random.Random(1954)
+    motores = [
+        numero_a_letras,
+        numero_a_letras_en,
+        numero_a_letras_fr,
+        lambda n: numero_a_letras_pt(n, "f"),
+    ]
+    for _ in range(5000):
+        n = azar.randrange(10 ** 15)
+        for motor in motores:
+            texto = motor(n)
+            assert texto
+            assert "None" not in texto
+            assert "  " not in texto
+            assert texto.strip() == texto
