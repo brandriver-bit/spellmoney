@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "spellmoney"
+version = "1.0.0"
+description = "Convierte montos a letras en español, inglés, portugués y francés para cheques, facturas, recibos y contratos, con soporte para las 154 divisas del estándar ISO 4217."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Brandon Rivera Alvarado" }]
+keywords = [
+    "numero-a-letras",
+    "monto-en-letras",
+    "amount-to-words",
+    "spanish",
+    "english",
+    "portuguese",
+    "french",
+    "invoicing",
+    "facturacion",
+    "cheques",
+    "iso4217",
+    "latam",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Natural Language :: Spanish",
+    "Natural Language :: English",
+    "Natural Language :: Portuguese (Brazilian)",
+    "Natural Language :: French",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "Topic :: Software Development :: Localization",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/brandriver-bit/spellmoney"
+Repository = "https://github.com/brandriver-bit/spellmoney"
+Issues = "https://github.com/brandriver-bit/spellmoney/issues"
+"Puerto a JavaScript" = "https://github.com/brandriver-bit/spellmoney-js"
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spellmoney"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "README.md", "LICENSE", "CONTRIBUTING.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
